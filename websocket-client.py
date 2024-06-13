@@ -3,7 +3,6 @@ import websockets
 import json
 import subprocess
 import os
-import psutil  # You need to install the psutil package
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -15,23 +14,35 @@ CLIENT_NAME = os.getenv('CLIENT_NAME')
 CLIENT_TYPE = os.getenv('CLIENT_TYPE')
 
 DISPLAY_OUTPUT = "HDMI-1"  # Replace with your actual display output
-HEARTBEAT_INTERVAL = 0.5  # 5 seconds
+HEARTBEAT_INTERVAL = 5  # 5 seconds
 
 # Initialize state
 current_state = "off"
+maintenance_mode = False
 
 async def get_cpu_temperature():
     try:
-        temps = psutil.sensors_temperatures()
-        if 'coretemp' in temps:
-            return temps['coretemp'][0].current
-        elif 'cpu-thermal' in temps:
-            return temps['cpu-thermal'][0].current
-        else:
-            return None
+        # Read temperature from system files
+        temp_files = subprocess.check_output("cat /sys/class/thermal/thermal_zone*/temp", shell=True)
+        temp_lines = temp_files.splitlines()
+        # Assuming the first line is the CPU temp in millidegree Celsius
+        temp_milli_celsius = int(temp_lines[0])
+        temp_celsius = temp_milli_celsius / 1000.0
+        return int(temp_celsius)  # Return the integer part of the temperature
     except Exception as e:
         print(f"Error reading CPU temperature: {e}")
         return None
+
+async def get_display_state():
+    try:
+        xrandr_output = subprocess.check_output("xrandr --listmonitors", shell=True).decode()
+        if DISPLAY_OUTPUT in xrandr_output and "connected" in xrandr_output:
+            return "on"
+        else:
+            return "off"
+    except Exception as e:
+        print(f"Error getting display state: {e}")
+        return "unknown"
 
 async def handle_message(message):
     global current_state
@@ -74,10 +85,10 @@ async def turn_off_screen():
 
 async def register(websocket, client_type, name=None):
     registration_message = {
-            "type": "register",
-            "clientType": client_type,
-            "name": name
-            }
+        "type": "register",
+        "clientType": client_type,
+        "name": name
+    }
     await websocket.send(json.dumps(registration_message))
     print(f"Registered with server as {client_type}, name: {name}")
     await disable_screen_sleep()
@@ -85,12 +96,12 @@ async def register(websocket, client_type, name=None):
 async def send_heartbeat(websocket):
     while True:
         cpu_temp = await get_cpu_temperature()
-        print(cpu_temp)
+        display_state = await get_display_state()
         heartbeat_message = {
-                "type": "heartbeat",
-                "state": current_state,
-                "cpuTemp": cpu_temp
-                }
+            "type": "heartbeat",
+            "state": display_state,
+            "cpuTemp": cpu_temp,
+        }
         await websocket.send(json.dumps(heartbeat_message))
         await asyncio.sleep(HEARTBEAT_INTERVAL)
 
