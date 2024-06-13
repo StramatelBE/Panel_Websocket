@@ -15,7 +15,7 @@ CLIENT_NAME = os.getenv('CLIENT_NAME')
 CLIENT_TYPE = os.getenv('CLIENT_TYPE')
 
 DISPLAY_OUTPUT = "HDMI-1"  # Replace with your actual display output
-HEARTBEAT_INTERVAL = 5  # 5 seconds
+HEARTBEAT_INTERVAL = 0.5  # 5 seconds
 
 # Initialize state
 current_state = "off"
