@@ -51,11 +51,15 @@ async def get_cpu_temperature():
 
 async def get_display_state():
     try:
-        xrandr_output = subprocess.check_output("xrandr --listmonitors", shell=True).decode()
-        if DISPLAY_OUTPUT in xrandr_output and "connected" in xrandr_output:
-            return "on"
-        else:
-            return "off"
+        xrandr_output = subprocess.check_output("xrandr --verbose", shell=True).decode()
+        for line in xrandr_output.split('\n'):
+            if DISPLAY_OUTPUT in line:
+                if "connected" in line and "primary" in line:
+                    if "0x0+0+0" not in line:  # When the screen is off, it shows 0x0+0+0
+                        return "on"
+                    else:
+                        return "off"
+        return "off"
     except Exception as e:
         print(f"Error getting display state: {e}")
         return "unknown"
@@ -123,6 +127,7 @@ async def send_heartbeat_to_server(websocket):
         "name": CLIENT_NAME
     }
     await websocket.send(json.dumps(heartbeat_message))
+    print(f"Sent heartbeat: {heartbeat_message}")
 
 async def send_heartbeat(websocket):
     global current_state
