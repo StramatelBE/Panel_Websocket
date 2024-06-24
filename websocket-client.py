@@ -4,10 +4,8 @@ import json
 import subprocess
 import os
 import RPi.GPIO as GPIO
-from time import sleep
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
 load_dotenv()
 
 URI = os.getenv('URI')
@@ -15,8 +13,8 @@ PORT = os.getenv('PORT')
 CLIENT_NAME = os.getenv('CLIENT_NAME')
 CLIENT_TYPE = os.getenv('CLIENT_TYPE')
 
-DISPLAY_OUTPUT = "HDMI-1"  # Replace with your actual display output
-HEARTBEAT_INTERVAL = 5  # 5 seconds
+DISPLAY_OUTPUT = "HDMI-1"
+HEARTBEAT_INTERVAL = 5
 
 # GPIO setup
 DOOR_SENSOR_PIN = 17
@@ -28,21 +26,12 @@ LED2_PIN = 10
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(DOOR_SENSOR_PIN, GPIO.IN)
-sleep(0.1)
 GPIO.setup(SECTOR_STATUS_PIN, GPIO.IN)
-sleep(0.1)
 GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-sleep(0.1)
 GPIO.setup(LED1_PIN, GPIO.OUT)
-sleep(0.1)
 GPIO.setup(LED2_PIN, GPIO.OUT)
-sleep(0.1)
 
-# Initialize state
 current_state = "off"
-SECTOR_STATUS = GPIO.input(SECTOR_STATUS_PIN)
-IS_DOOR_OPEN = GPIO.input(DOOR_SENSOR_PIN)
-MAINTENANCE_MODE = False  # Static value for now
 
 async def get_cpu_temperature():
     try:
@@ -80,11 +69,15 @@ async def handle_message(message, websocket):
                 subprocess.run(["xrandr", "--output", DISPLAY_OUTPUT, "--auto"], env=env)
                 print("Screen turned on")
                 current_state = "on"
+                GPIO.output(LED1_PIN, GPIO.HIGH)
+                GPIO.output(LED2_PIN, GPIO.HIGH)
             elif instruction == "off":
                 subprocess.run(["xrandr", "--output", DISPLAY_OUTPUT, "--off"], env=env)
                 subprocess.run(["xset", "dpms", "force", "off"], env=env)
                 print("Screen turned off")
                 current_state = "off"
+                GPIO.output(LED1_PIN, GPIO.LOW)
+                GPIO.output(LED2_PIN, GPIO.LOW)
             else:
                 print(f"Unknown instruction: {instruction}")
             await send_heartbeat_to_server(websocket)
@@ -107,6 +100,8 @@ async def turn_off_screen():
     subprocess.run(["xset", "dpms", "force", "off"], env=env)
     print("Screen turned off due to disconnection")
     current_state = "off"
+    GPIO.output(LED1_PIN, GPIO.LOW)
+    GPIO.output(LED2_PIN, GPIO.LOW)
 
 async def register(websocket, client_type, name=None):
     registration_message = {
@@ -125,16 +120,15 @@ async def send_heartbeat_to_server(websocket):
         "type": "heartbeat",
         "state": display_state,
         "cpuTemp": cpu_temp,
-        "sectorStatus": SECTOR_STATUS,
-        "isDoorOpen": IS_DOOR_OPEN,
-        "maintenanceMode": MAINTENANCE_MODE,
+        "sectorStatus": GPIO.input(SECTOR_STATUS_PIN),
+        "isDoorOpen": GPIO.input(DOOR_SENSOR_PIN),
+        "maintenanceMode": GPIO.input(BUTTON_PIN) == GPIO.LOW,
         "name": CLIENT_NAME
     }
     await websocket.send(json.dumps(heartbeat_message))
     print(f"Sent heartbeat: {heartbeat_message}")
 
 async def send_heartbeat(websocket):
-    global current_state
     while True:
         try:
             await send_heartbeat_to_server(websocket)
@@ -171,34 +165,6 @@ async def connect():
             print(f"Unexpected error: {e}. Turning off screen and reconnecting in 5 seconds...")
             await turn_off_screen()
             await asyncio.sleep(5)
-
-# GPIO event handlers
-def door_sensor_callback(channel):
-    global IS_DOOR_OPEN
-    IS_DOOR_OPEN = GPIO.input(DOOR_SENSOR_PIN)
-    print(f"Door sensor state changed: {'Open' if IS_DOOR_OPEN else 'Closed'}")
-    GPIO.output(LED1_PIN, GPIO.HIGH if IS_DOOR_OPEN else GPIO.LOW)
-
-def sector_status_callback(channel):
-    global SECTOR_STATUS
-    SECTOR_STATUS = GPIO.input(SECTOR_STATUS_PIN)
-    print(f"Sector status changed: {'Active' if SECTOR_STATUS else 'Inactive'}")
-    GPIO.output(LED2_PIN, GPIO.HIGH if SECTOR_STATUS else GPIO.LOW)
-
-def button_callback(channel):
-    print("Button pressed, toggling maintenance mode")
-    global MAINTENANCE_MODE
-    MAINTENANCE_MODE = not MAINTENANCE_MODE
-    GPIO.output(LED1_PIN, GPIO.HIGH if MAINTENANCE_MODE else GPIO.LOW)
-    GPIO.output(LED2_PIN, GPIO.HIGH if MAINTENANCE_MODE else GPIO.LOW)
-
-# Setting up event detection
-GPIO.add_event_detect(DOOR_SENSOR_PIN, GPIO.BOTH, callback=door_sensor_callback)
-sleep(0.1)
-GPIO.add_event_detect(SECTOR_STATUS_PIN, GPIO.BOTH, callback=sector_status_callback)
-sleep(0.1)
-GPIO.add_event_detect(BUTTON_PIN, GPIO.FALLING, callback=button_callback, bouncetime=200)
-sleep(0.1)
 
 if __name__ == "__main__":
     try:
