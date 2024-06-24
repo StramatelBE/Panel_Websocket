@@ -15,7 +15,7 @@ def setup():
     # Configuration des entrées
     GPIO.setup(DOOR_SENSOR_PIN, GPIO.IN)
     GPIO.setup(SECTOR_STATUS_PIN, GPIO.IN)
-    GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.setup(BUTTON_PIN, GPIO.IN)
     
     # Configuration des sorties
     GPIO.setup(LED1_PIN, GPIO.OUT)
@@ -26,22 +26,26 @@ def read_inputs():
     sector_state = GPIO.input(SECTOR_STATUS_PIN)
     button_state = GPIO.input(BUTTON_PIN)
     
-    print(f"Door Sensor: {'Open' if door_state else 'Closed'}")
-    print(f"Sector Status: {'Active' if sector_state else 'Inactive'}")
-    print(f"Button: {'Pressed' if button_state == GPIO.LOW else 'Not Pressed'}")
+    print(f"Door Sensor: {'1 (Open)' if door_state else '0 (Closed)'}")
+    print(f"Sector Status: {'1 (Active)' if sector_state else '0 (Inactive)'}")
+    print(f"Button: {'1 (On)' if button_state else '0 (Off)'}")
 
-def toggle_leds():
-    GPIO.output(LED1_PIN, not GPIO.input(LED1_PIN))
-    GPIO.output(LED2_PIN, not GPIO.input(LED2_PIN))
-    print(f"LED1: {'On' if GPIO.input(LED1_PIN) else 'Off'}")
-    print(f"LED2: {'On' if GPIO.input(LED2_PIN) else 'Off'}")
+def update_leds(door_state, sector_state):
+    GPIO.output(LED1_PIN, door_state)
+    GPIO.output(LED2_PIN, sector_state)
+    print(f"LED1: {'On' if door_state else 'Off'}")
+    print(f"LED2: {'On' if sector_state else 'Off'}")
 
 def main():
     setup()
     try:
         while True:
+            door_state = GPIO.input(DOOR_SENSOR_PIN)
+            sector_state = GPIO.input(SECTOR_STATUS_PIN)
+            
             read_inputs()
-            toggle_leds()
+            update_leds(door_state, sector_state)
+            print("-" * 30)
             time.sleep(1)
     except KeyboardInterrupt:
         print("\nProgram stopped by user")
