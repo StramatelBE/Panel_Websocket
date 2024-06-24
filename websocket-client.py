@@ -3,7 +3,7 @@ import websockets
 import json
 import subprocess
 import os
-import RPi.GPIO as GPIO  # Assuming this is for a Raspberry Pi
+import RPi.GPIO as GPIO
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -34,8 +34,8 @@ GPIO.setup(LED2_PIN, GPIO.OUT)
 
 # Initialize state
 current_state = "off"
-SECTOR_STATUS = True  # Static value for now
-IS_DOOR_OPEN = False  # Static value for now
+SECTOR_STATUS = GPIO.input(SECTOR_STATUS_PIN)
+IS_DOOR_OPEN = GPIO.input(DOOR_SENSOR_PIN)
 MAINTENANCE_MODE = False  # Static value for now
 
 async def get_cpu_temperature():
@@ -166,5 +166,33 @@ async def connect():
             await turn_off_screen()
             await asyncio.sleep(5)
 
+# GPIO event handlers
+def door_sensor_callback(channel):
+    global IS_DOOR_OPEN
+    IS_DOOR_OPEN = GPIO.input(DOOR_SENSOR_PIN)
+    print(f"Door sensor state changed: {'Open' if IS_DOOR_OPEN else 'Closed'}")
+    GPIO.output(LED1_PIN, GPIO.HIGH if IS_DOOR_OPEN else GPIO.LOW)
+
+def sector_status_callback(channel):
+    global SECTOR_STATUS
+    SECTOR_STATUS = GPIO.input(SECTOR_STATUS_PIN)
+    print(f"Sector status changed: {'Active' if SECTOR_STATUS else 'Inactive'}")
+    GPIO.output(LED2_PIN, GPIO.HIGH if SECTOR_STATUS else GPIO.LOW)
+
+def button_callback(channel):
+    print("Button pressed, toggling maintenance mode")
+    global MAINTENANCE_MODE
+    MAINTENANCE_MODE = not MAINTENANCE_MODE
+    GPIO.output(LED1_PIN, GPIO.HIGH if MAINTENANCE_MODE else GPIO.LOW)
+    GPIO.output(LED2_PIN, GPIO.HIGH if MAINTENANCE_MODE else GPIO.LOW)
+
+# Setting up event detection
+GPIO.add_event_detect(DOOR_SENSOR_PIN, GPIO.BOTH, callback=door_sensor_callback)
+GPIO.add_event_detect(SECTOR_STATUS_PIN, GPIO.BOTH, callback=sector_status_callback)
+GPIO.add_event_detect(BUTTON_PIN, GPIO.FALLING, callback=button_callback, bouncetime=200)
+
 if __name__ == "__main__":
-    asyncio.run(connect())
+    try:
+        asyncio.run(connect())
+    finally:
+        GPIO.cleanup()
