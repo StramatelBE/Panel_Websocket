@@ -31,19 +31,6 @@ GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.setup(LED1_PIN, GPIO.OUT)
 GPIO.setup(LED2_PIN, GPIO.OUT)
 
-# GPIO setup
-DOOR_SENSOR_PIN = 17
-SECTOR_STATUS_PIN = 27
-BUTTON_PIN = 22
-LED1_PIN = 5
-LED2_PIN = 6
-
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(DOOR_SENSOR_PIN, GPIO.IN)
-GPIO.setup(SECTOR_STATUS_PIN, GPIO.IN)
-GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(LED1_PIN, GPIO.OUT)
-GPIO.setup(LED2_PIN, GPIO.OUT)
 
 # Initialize state
 current_state = "off"
