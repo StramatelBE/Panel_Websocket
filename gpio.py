@@ -47,7 +47,7 @@ def main():
             update_leds(door_state, sector_state)
             print(f"Time: {time.time()}")
             print("-" * 30)
-            time.sleep(0.1)  # Lecture plus fréquente
+            time.sleep(1)  # Lecture plus fréquente
     except KeyboardInterrupt:
         print("\nProgram stopped by user")
     finally:
