@@ -34,7 +34,9 @@ GPIO.setup(LED2_PIN, GPIO.OUT)
 
 # Initialize state
 current_state = "off"
-maintenance_mode = False
+SECTOR_STATUS = True  # Static value for now
+IS_DOOR_OPEN = False  # Static value for now
+MAINTENANCE_MODE = False  # Static value for now
 
 async def get_cpu_temperature():
     try:
@@ -115,6 +117,9 @@ async def send_heartbeat_to_server(websocket):
         "type": "heartbeat",
         "state": display_state,
         "cpuTemp": cpu_temp,
+        "sectorStatus": SECTOR_STATUS,
+        "isDoorOpen": IS_DOOR_OPEN,
+        "maintenanceMode": MAINTENANCE_MODE
     }
     await websocket.send(json.dumps(heartbeat_message))
 
