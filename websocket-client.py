@@ -101,6 +101,8 @@ async def turn_off_screen():
     env = os.environ.copy()
     env["DISPLAY"] = ":0"
     subprocess.run(["xrandr", "--output", DISPLAY_OUTPUT, "--off"], env=env)
+    # Additional commands to ensure the screen is turned off
+    subprocess.run(["xset", "dpms", "force", "off"], env=env)
     print("Screen turned off due to disconnection")
     current_state = "off"
 
