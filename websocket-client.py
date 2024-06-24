@@ -22,13 +22,11 @@ maintenance_mode = False
 
 async def get_cpu_temperature():
     try:
-        # Read temperature from system files
         temp_files = subprocess.check_output("cat /sys/class/thermal/thermal_zone*/temp", shell=True)
         temp_lines = temp_files.splitlines()
-        # Assuming the first line is the CPU temp in millidegree Celsius
         temp_milli_celsius = int(temp_lines[0])
         temp_celsius = temp_milli_celsius / 1000.0
-        return int(temp_celsius)  # Return the integer part of the temperature
+        return int(temp_celsius)
     except Exception as e:
         print(f"Error reading CPU temperature: {e}")
         return None
@@ -94,9 +92,13 @@ async def register(websocket, client_type, name=None):
     await disable_screen_sleep()
 
 async def send_heartbeat(websocket):
+    global current_state
     while True:
         cpu_temp = await get_cpu_temperature()
         display_state = await get_display_state()
+        if display_state != current_state:
+            print(f"Display state changed from {current_state} to {display_state}")
+            current_state = display_state
         heartbeat_message = {
             "type": "heartbeat",
             "state": display_state,
