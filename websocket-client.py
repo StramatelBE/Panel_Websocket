@@ -3,7 +3,6 @@ import websockets
 import json
 import subprocess
 import os
-import RPi.GPIO as GPIO  # Ensure this is installed if you are using a Raspberry Pi
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -15,21 +14,7 @@ CLIENT_NAME = os.getenv('CLIENT_NAME')
 CLIENT_TYPE = os.getenv('CLIENT_TYPE')
 
 DISPLAY_OUTPUT = "HDMI-1"  # Replace with your actual display output
-HEARTBEAT_INTERVAL = 0.5  # 5 seconds
-
-# GPIO setup
-DOOR_SENSOR_PIN = 17
-SECTOR_STATUS_PIN = 27
-BUTTON_PIN = 22
-LED1_PIN = 5
-LED2_PIN = 6
-
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(DOOR_SENSOR_PIN, GPIO.IN)
-GPIO.setup(SECTOR_STATUS_PIN, GPIO.IN)
-GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(LED1_PIN, GPIO.OUT)
-GPIO.setup(LED2_PIN, GPIO.OUT)
+HEARTBEAT_INTERVAL = 5  # 5 seconds
 
 # GPIO setup
 DOOR_SENSOR_PIN = 17
@@ -51,34 +36,25 @@ maintenance_mode = False
 
 async def get_cpu_temperature():
     try:
-        # Read temperature from system files
         temp_files = subprocess.check_output("cat /sys/class/thermal/thermal_zone*/temp", shell=True)
         temp_lines = temp_files.splitlines()
-        # Assuming the first line is the CPU temp in millidegree Celsius
         temp_milli_celsius = int(temp_lines[0])
         temp_celsius = temp_milli_celsius / 1000.0
-        return int(temp_celsius)  # Return the integer part of the temperature
+        return int(temp_celsius)
     except Exception as e:
         print(f"Error reading CPU temperature: {e}")
         return None
 
-def is_door_open(): 
-	return GPIO.input(DOOR_SENSOR_PIN) == GPIO.HIGH
-
-def sector_status():
-	return True
-    #return GPIO.input(SECTOR_STATUS_PIN) == GPIO.HIGH
-
-def button_pressed():
-    global maintenance_mode
-    if GPIO.input(BUTTON_PIN) == GPIO.LOW:
-        maintenance_mode = not maintenance_mode
-        return True
-    return False
-
-def set_leds(state):
-    GPIO.output(LED1_PIN, GPIO.HIGH if state == "on" else GPIO.LOW)
-    GPIO.output(LED2_PIN, GPIO.HIGH if state == "on" else GPIO.LOW)
+async def get_display_state():
+    try:
+        xrandr_output = subprocess.check_output("xrandr --listmonitors", shell=True).decode()
+        if DISPLAY_OUTPUT in xrandr_output and "connected" in xrandr_output:
+            return "on"
+        else:
+            return "off"
+    except Exception as e:
+        print(f"Error getting display state: {e}")
+        return "unknown"
 
 async def handle_message(message):
     global current_state
@@ -100,7 +76,6 @@ async def handle_message(message):
                 current_state = "off"
             else:
                 print(f"Unknown instruction: {instruction}")
-            set_leds(current_state)
     except json.JSONDecodeError:
         print("Failed to decode message:", message)
 
@@ -119,7 +94,6 @@ async def turn_off_screen():
     subprocess.run(["xrandr", "--output", DISPLAY_OUTPUT, "--off"], env=env)
     print("Screen turned off due to disconnection")
     current_state = "off"
-    set_leds(current_state)
 
 async def register(websocket, client_type, name=None):
     registration_message = {
@@ -132,15 +106,17 @@ async def register(websocket, client_type, name=None):
     await disable_screen_sleep()
 
 async def send_heartbeat(websocket):
+    global current_state
     while True:
         cpu_temp = await get_cpu_temperature()
+        display_state = await get_display_state()
+        if display_state != current_state:
+            print(f"Display state changed from {current_state} to {display_state}")
+            current_state = display_state
         heartbeat_message = {
             "type": "heartbeat",
-            "state": current_state,
+            "state": display_state,
             "cpuTemp": cpu_temp,
-            "isDoorOpen": is_door_open(),
-            "sectorStatus": sector_status(),
-            "maintenanceMode": maintenance_mode
         }
         await websocket.send(json.dumps(heartbeat_message))
         await asyncio.sleep(HEARTBEAT_INTERVAL)
@@ -157,11 +133,6 @@ async def connect():
                     message = await websocket.recv()
                     print("Message received:", message)
                     await handle_message(message)
-                    if button_pressed():
-                        await websocket.send(json.dumps({
-                            "type": "maintenanceMode",
-                            "state": maintenance_mode
-                        }))
         except websockets.ConnectionClosedError as e:
             print(f"Connection closed: {e}. Turning off screen and reconnecting in 5 seconds...")
             await turn_off_screen()
