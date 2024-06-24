@@ -20,9 +20,9 @@ HEARTBEAT_INTERVAL = 5  # 5 seconds
 # GPIO setup
 DOOR_SENSOR_PIN = 17
 SECTOR_STATUS_PIN = 27
-BUTTON_PIN = 22
-LED1_PIN = 5
-LED2_PIN = 6
+BUTTON_PIN = 4
+LED1_PIN = 22
+LED2_PIN = 10
 
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
@@ -51,16 +51,11 @@ async def get_cpu_temperature():
 
 async def get_display_state():
     try:
-        xrandr_output = subprocess.check_output("xrandr --verbose", shell=True).decode()
-        lines = xrandr_output.split('\n')
-        for i, line in enumerate(lines):
-            if DISPLAY_OUTPUT in line and "connected primary" in line:
-                # Check if the next line contains the resolution
-                if i + 1 < len(lines) and '+' in lines[i + 1]:
-                    return "on"
-                else:
-                    return "off"
-        return "off"
+        xrandr_output = subprocess.check_output("xrandr --listmonitors", shell=True).decode()
+        if "Monitors: 1" in xrandr_output:
+            return "on"
+        else:
+            return "off"
     except Exception as e:
         print(f"Error getting display state: {e}")
         return "unknown"
@@ -81,6 +76,7 @@ async def handle_message(message, websocket):
                 current_state = "on"
             elif instruction == "off":
                 subprocess.run(["xrandr", "--output", DISPLAY_OUTPUT, "--off"], env=env)
+                subprocess.run(["xset", "dpms", "force", "off"], env=env)
                 print("Screen turned off")
                 current_state = "off"
             else:
@@ -102,7 +98,6 @@ async def turn_off_screen():
     env = os.environ.copy()
     env["DISPLAY"] = ":0"
     subprocess.run(["xrandr", "--output", DISPLAY_OUTPUT, "--off"], env=env)
-    # Additional commands to ensure the screen is turned off
     subprocess.run(["xset", "dpms", "force", "off"], env=env)
     print("Screen turned off due to disconnection")
     current_state = "off"
