@@ -122,7 +122,7 @@ async def send_heartbeat_to_server(websocket):
         "type": "heartbeat",
         "state": display_state,
         "cpuTemp": cpu_temp,
-        "sectorStatus": GPIO.input(SECTOR_STATUS_PIN) == GPIO.HIGH,
+        "sectorStatus": GPIO.input(SECTOR_STATUS_PIN) == GPIO.LOW,
         "isDoorOpen": GPIO.input(DOOR_SENSOR_PIN) == GPIO.HIGH,
         "maintenanceMode": GPIO.input(BUTTON_PIN) == GPIO.HIGH,
         "name": CLIENT_NAME
