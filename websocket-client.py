@@ -3,8 +3,9 @@ import websockets
 import json
 import subprocess
 import os
+import RPi.GPIO as GPIO  # Assuming this is for a Raspberry Pi
 from dotenv import load_dotenv
-#
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -76,6 +77,7 @@ async def handle_message(message):
                 current_state = "off"
             else:
                 print(f"Unknown instruction: {instruction}")
+            await send_heartbeat_to_server(websocket)
     except json.JSONDecodeError:
         print("Failed to decode message:", message)
 
@@ -104,6 +106,16 @@ async def register(websocket, client_type, name=None):
     await websocket.send(json.dumps(registration_message))
     print(f"Registered with server as {client_type}, name: {name}")
     await disable_screen_sleep()
+
+async def send_heartbeat_to_server(websocket):
+    cpu_temp = await get_cpu_temperature()
+    display_state = await get_display_state()
+    heartbeat_message = {
+        "type": "heartbeat",
+        "state": display_state,
+        "cpuTemp": cpu_temp,
+    }
+    await websocket.send(json.dumps(heartbeat_message))
 
 async def send_heartbeat(websocket):
     global current_state
