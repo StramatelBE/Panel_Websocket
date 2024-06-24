@@ -4,6 +4,7 @@ import json
 import subprocess
 import os
 import RPi.GPIO as GPIO
+from time import sleep
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -27,10 +28,15 @@ LED2_PIN = 10
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(DOOR_SENSOR_PIN, GPIO.IN)
+sleep(0.1)
 GPIO.setup(SECTOR_STATUS_PIN, GPIO.IN)
+sleep(0.1)
 GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+sleep(0.1)
 GPIO.setup(LED1_PIN, GPIO.OUT)
+sleep(0.1)
 GPIO.setup(LED2_PIN, GPIO.OUT)
+sleep(0.1)
 
 # Initialize state
 current_state = "off"
@@ -188,8 +194,11 @@ def button_callback(channel):
 
 # Setting up event detection
 GPIO.add_event_detect(DOOR_SENSOR_PIN, GPIO.BOTH, callback=door_sensor_callback)
+sleep(0.1)
 GPIO.add_event_detect(SECTOR_STATUS_PIN, GPIO.BOTH, callback=sector_status_callback)
+sleep(0.1)
 GPIO.add_event_detect(BUTTON_PIN, GPIO.FALLING, callback=button_callback, bouncetime=200)
+sleep(0.1)
 
 if __name__ == "__main__":
     try:
