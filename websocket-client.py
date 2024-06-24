@@ -24,6 +24,7 @@ BUTTON_PIN = 22
 LED1_PIN = 5
 LED2_PIN = 6
 
+GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(DOOR_SENSOR_PIN, GPIO.IN)
 GPIO.setup(SECTOR_STATUS_PIN, GPIO.IN)
@@ -57,7 +58,7 @@ async def get_display_state():
         print(f"Error getting display state: {e}")
         return "unknown"
 
-async def handle_message(message):
+async def handle_message(message, websocket):
     global current_state
     print(f"Raw message received: {message}")
     try:
@@ -120,17 +121,11 @@ async def send_heartbeat_to_server(websocket):
 async def send_heartbeat(websocket):
     global current_state
     while True:
-        cpu_temp = await get_cpu_temperature()
-        display_state = await get_display_state()
-        if display_state != current_state:
-            print(f"Display state changed from {current_state} to {display_state}")
-            current_state = display_state
-        heartbeat_message = {
-            "type": "heartbeat",
-            "state": display_state,
-            "cpuTemp": cpu_temp,
-        }
-        await websocket.send(json.dumps(heartbeat_message))
+        try:
+            await send_heartbeat_to_server(websocket)
+        except websockets.ConnectionClosed:
+            print("Connection closed during heartbeat")
+            break
         await asyncio.sleep(HEARTBEAT_INTERVAL)
 
 async def connect():
@@ -140,11 +135,11 @@ async def connect():
             async with websockets.connect(uri) as websocket:
                 print("Connected to the server")
                 await register(websocket, CLIENT_TYPE, CLIENT_NAME)
-                asyncio.create_task(send_heartbeat(websocket))
+                heartbeat_task = asyncio.create_task(send_heartbeat(websocket))
                 while True:
                     message = await websocket.recv()
                     print("Message received:", message)
-                    await handle_message(message)
+                    await handle_message(message, websocket)
         except websockets.ConnectionClosedError as e:
             print(f"Connection closed: {e}. Turning off screen and reconnecting in 5 seconds...")
             await turn_off_screen()
