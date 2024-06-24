@@ -52,13 +52,14 @@ async def get_cpu_temperature():
 async def get_display_state():
     try:
         xrandr_output = subprocess.check_output("xrandr --verbose", shell=True).decode()
-        for line in xrandr_output.split('\n'):
-            if DISPLAY_OUTPUT in line:
-                if "connected" in line and "primary" in line:
-                    if "0x0+0+0" not in line:  # When the screen is off, it shows 0x0+0+0
-                        return "on"
-                    else:
-                        return "off"
+        lines = xrandr_output.split('\n')
+        for i, line in enumerate(lines):
+            if DISPLAY_OUTPUT in line and "connected primary" in line:
+                # Check if the next line contains the resolution
+                if i + 1 < len(lines) and '+' in lines[i + 1]:
+                    return "on"
+                else:
+                    return "off"
         return "off"
     except Exception as e:
         print(f"Error getting display state: {e}")
