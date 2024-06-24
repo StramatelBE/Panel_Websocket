@@ -170,6 +170,7 @@ async def connect():
 
 if __name__ == "__main__":
     try:
+        turn_off_screen()
         asyncio.run(connect())
     finally:
         GPIO.cleanup()
