@@ -119,7 +119,8 @@ async def send_heartbeat_to_server(websocket):
         "cpuTemp": cpu_temp,
         "sectorStatus": SECTOR_STATUS,
         "isDoorOpen": IS_DOOR_OPEN,
-        "maintenanceMode": MAINTENANCE_MODE
+        "maintenanceMode": MAINTENANCE_MODE,
+        "name": CLIENT_NAME
     }
     await websocket.send(json.dumps(heartbeat_message))
 
