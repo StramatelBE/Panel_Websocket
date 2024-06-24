@@ -1,9 +1,9 @@
 import RPi.GPIO as GPIO
 import time
 
-PIN_TO_TEST = 17
+PIN_TO_TEST = 4
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(PIN_TO_TEST, GPIO.IN)
+GPIO.setup(PIN_TO_TEST, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
 last_state = None
 try:
