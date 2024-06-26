@@ -136,8 +136,7 @@ class PanelController:
             result = subprocess.check_output("xrandr --listmonitors", shell=True).decode()
             return "on" if "Monitors: 1" in result else "off"
         except Exception as e:
-            print(f"Error getting display state: {e}") objects.
-To https://github.com/StramatelBE/Panel_Websocket.git
+            print(f"Error getting display state: {e}")
             return "unknown"
 
     async def disable_screen_sleep(self):
