@@ -43,11 +43,11 @@ class PanelController:
                     await self.main_loop(websocket)
             except websockets.ConnectionClosedError as e:
                 print(f"Connection closed: {e}. Reconnecting in 5 seconds...")
-                self.turn_off_screen()
+                await self.turn_off_screen()
                 await asyncio.sleep(5)
             except Exception as e:
                 print(f"Unexpected error: {e}. Reconnecting in 5 seconds...")
-                self.turn_off_screen()
+                await self.turn_off_screen()
                 await asyncio.sleep(5)
 
     async def register(self, websocket):
