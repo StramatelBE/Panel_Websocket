@@ -144,6 +144,7 @@ class PanelController:
     async def get_display_state(self):
         try:
             result = subprocess.check_output("xrandr --listmonitors", shell=True).decode()
+            print(result)
             return "on" if "Monitors: 1" in result else "off"
         except Exception as e:
             print(f"Error getting display state: {e}")
