@@ -146,7 +146,6 @@ async def connect():
                 heartbeat_task = asyncio.create_task(send_heartbeat(websocket))
                 while True:
                     message = await websocket.recv()
-                    print("Message received:", message)
                     await handle_message(message, websocket)
         except websockets.ConnectionClosedError as e:
             print(f"Connection closed: {e}. Turning off screen and reconnecting in 5 seconds...")
