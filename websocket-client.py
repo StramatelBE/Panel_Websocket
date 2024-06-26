@@ -2,6 +2,8 @@ import asyncio
 import websockets
 import json
 import subprocess
+import math
+
 import os
 import RPi.GPIO as GPIO
 from dotenv import load_dotenv
@@ -123,13 +125,21 @@ class PanelController:
         except Exception as e:
             print(f"Failed to send heartbeat: {e}")  # Log the error
      
-    async def get_cpu_temperature(self):
+
+    async def get_cpu_temperature():
         try:
-            result = subprocess.check_output("cat /sys/class/thermal/thermal_zone*/temp", shell=True)
-            return int(result) / 1000
+            # Command to get CPU temperature
+            temp_files = subprocess.check_output("cat /sys/class/thermal/thermal_zone*/temp", shell=True)
+            temp_lines = temp_files.splitlines()
+            temp_milli_celsius = int(temp_lines[0])
+            
+            # Convert milli Celsius to Celsius and use math.floor to round down
+            temp_celsius = temp_milli_celsius / 1000.0
+            return math.floor(temp_celsius)
         except Exception as e:
             print(f"Error reading CPU temperature: {e}")
             return None
+
 
     async def get_display_state(self):
         try:
