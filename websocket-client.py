@@ -57,13 +57,16 @@ class PanelController:
         print(f"Registered with server as {self.client_type}, name: {self.client_name}")
 
     async def main_loop(self, websocket):
-        task = asyncio.create_task(self.send_heartbeat(websocket))
+    # Create the heartbeat task
+        heartbeat_task = asyncio.create_task(self.send_heartbeat(websocket))
         try:
             while True:
                 message = await websocket.recv()
                 await self.handle_message(message, websocket)
         finally:
-            task.cancel()
+            heartbeat_task.cancel()  # Ensure the task is cancelled when the loop exits
+            await heartbeat_task  # Wait for the task to be cancelled properly
+
 
     async def handle_message(self, message, websocket):
         try:
@@ -71,7 +74,11 @@ class PanelController:
             if data.get("type") == "instruction" and data.get("to") == "panel":
                 await self.process_instruction(data)
                 if "heartbeatTimer" in data:
-                    self.heartbeat_interval = data["heartbeatTimer"]
+                    new_interval = int(data["heartbeatTimer"])
+                    if new_interval > 0:
+                        self.heartbeat_interval = new_interval
+                    else:
+                        print("Invalid heartbeat interval received; ignoring update.")
                 await self.send_heartbeat_to_server(websocket)
         except json.JSONDecodeError:
             print("Failed to decode message:", message)
@@ -90,8 +97,15 @@ class PanelController:
 
     async def send_heartbeat(self, websocket):
         while True:
-            await self.send_heartbeat_to_server(websocket)
-            await asyncio.sleep(self.heartbeat_interval)
+            try:
+                await self.send_heartbeat_to_server(websocket)
+                await asyncio.sleep(self.heartbeat_interval)  # Ensure the interval is valid and being used
+            except asyncio.CancelledError:
+                print("Heartbeat task cancelled, exiting...")
+                break
+            except Exception as e:
+                print(f"Error during heartbeat: {e}")  # Log any errors that occur
+
 
     async def send_heartbeat_to_server(self, websocket):
         data = {
