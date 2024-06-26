@@ -15,7 +15,7 @@ class PanelController:
         self.client_name = os.getenv('CLIENT_NAME')
         self.client_type = os.getenv('CLIENT_TYPE')
         self.display_output = "HDMI-1"
-        self.heartbeat_interval = 30  # Default heartbeat interval in seconds
+        self.heartbeat_interval = 5  # Default heartbeat interval in seconds
 
         # GPIO setup
         self.door_sensor_pin = 17
@@ -43,9 +43,11 @@ class PanelController:
                     await self.main_loop(websocket)
             except websockets.ConnectionClosedError as e:
                 print(f"Connection closed: {e}. Reconnecting in 5 seconds...")
+                self.turn_off_screen()
                 await asyncio.sleep(5)
             except Exception as e:
                 print(f"Unexpected error: {e}. Reconnecting in 5 seconds...")
+                self.turn_off_screen()
                 await asyncio.sleep(5)
 
     async def register(self, websocket):
