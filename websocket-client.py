@@ -57,10 +57,8 @@ async def get_display_state():
 
 async def handle_message(message, websocket):
     global current_state
-    print(f"Raw message received: {message}")
     try:
         data = json.loads(message)
-        print(f"Decoded message: {data}")
         if data.get("type") == "instruction" and data.get("to") == "panel":
             instruction = data.get("instruction")
             env = os.environ.copy()
@@ -128,7 +126,6 @@ async def send_heartbeat_to_server(websocket):
         "name": CLIENT_NAME
     }
     await websocket.send(json.dumps(heartbeat_message))
-    print(f"Sent heartbeat: {heartbeat_message}")
 
 async def send_heartbeat(websocket):
     while True:
