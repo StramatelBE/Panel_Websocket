@@ -14,7 +14,7 @@ CLIENT_NAME = os.getenv('CLIENT_NAME')
 CLIENT_TYPE = os.getenv('CLIENT_TYPE')
 
 DISPLAY_OUTPUT = "HDMI-1"
-heartbeat_interval = 5
+global heartbeat_interval
 
 # GPIO setup
 DOOR_SENSOR_PIN = 17
@@ -79,7 +79,7 @@ async def handle_message(message, websocket):
             else:
                 print(f"Unknown instruction: {instruction}")
 
-            heartbeat_interval = data.get("heartbeatTimer", heartbeat_interval)
+            heartbeat_interval = data.get("heartbeatTimer")
             await send_heartbeat_to_server(websocket)
     except json.JSONDecodeError:
         print("Failed to decode message:", message)
