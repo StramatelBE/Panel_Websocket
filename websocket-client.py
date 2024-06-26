@@ -126,7 +126,7 @@ class PanelController:
             print(f"Failed to send heartbeat: {e}")  # Log the error
      
 
-    async def get_cpu_temperature():
+    async def get_cpu_temperature(self):
         try:
             # Command to get CPU temperature
             temp_files = subprocess.check_output("cat /sys/class/thermal/thermal_zone*/temp", shell=True)
