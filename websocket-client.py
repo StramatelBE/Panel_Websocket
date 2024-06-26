@@ -108,17 +108,21 @@ class PanelController:
 
 
     async def send_heartbeat_to_server(self, websocket):
-        data = {
-            "type": "heartbeat",
-            "state": await self.get_display_state(),
-            "cpuTemp": await self.get_cpu_temperature(),
-            "sectorStatus": GPIO.input(self.sector_status_pin) == GPIO.LOW,
-            "isDoorOpen": GPIO.input(self.door_sensor_pin) == GPIO.HIGH,
-            "maintenanceMode": GPIO.input(self.button_pin) == GPIO.HIGH,
-            "name": self.client_name
-        }
-        await websocket.send(json.dumps(data))
-
+        try:
+            data = {
+                "type": "heartbeat",
+                "state": await self.get_display_state(),
+                "cpuTemp": await self.get_cpu_temperature(),
+                "sectorStatus": GPIO.input(self.sector_status_pin) == GPIO.LOW,
+                "isDoorOpen": GPIO.input(self.door_sensor_pin) == GPIO.HIGH,
+                "maintenanceMode": GPIO.input(self.button_pin) == GPIO.HIGH,
+                "name": self.client_name
+            }
+            await websocket.send(json.dumps(data))
+            print(f"Heartbeat sent at interval {self.heartbeat_interval}s")  # Log when a heartbeat is sent
+        except Exception as e:
+            print(f"Failed to send heartbeat: {e}")  # Log the error
+     
     async def get_cpu_temperature(self):
         try:
             result = subprocess.check_output("cat /sys/class/thermal/thermal_zone*/temp", shell=True)
