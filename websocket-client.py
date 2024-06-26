@@ -86,7 +86,7 @@ class PanelController:
             GPIO.output(self.led1_pin, GPIO.HIGH)
             GPIO.output(self.led2_pin, GPIO.HIGH)
         elif instruction == "off":
-            self.turn_off_screen()
+            await self.turn_off_screen()
 
     async def send_heartbeat(self, websocket):
         while True:
