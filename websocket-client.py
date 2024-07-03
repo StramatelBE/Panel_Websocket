@@ -35,9 +35,9 @@ class PanelController:
         self.current_state = "off"
         
         # Add event detection
-        GPIO.add_event_detect(self.door_sensor_pin, GPIO.BOTH, callback=self.gpio_event_detected, bouncetime=200)
-        GPIO.add_event_detect(self.sector_status_pin, GPIO.BOTH, callback=self.gpio_event_detected, bouncetime=200)
-        GPIO.add_event_detect(self.button_pin, GPIO.BOTH, callback=self.gpio_event_detected, bouncetime=200)
+        # GPIO.add_event_detect(self.door_sensor_pin, GPIO.BOTH, callback=self.gpio_event_detected, bouncetime=200)
+        # GPIO.add_event_detect(self.sector_status_pin, GPIO.BOTH, callback=self.gpio_event_detected, bouncetime=200)
+        # GPIO.add_event_detect(self.button_pin, GPIO.BOTH, callback=self.gpio_event_detected, bouncetime=200)
 
     def gpio_event_detected(self, channel):
         print(f"GPIO event detected on channel: {channel}")
@@ -188,6 +188,10 @@ class PanelController:
         GPIO.cleanup()
 
 if __name__ == "__main__":
+    env = os.environ.copy()
+
+    subprocess.run(["xrandr", "--output", "HDMI-1", "--off"], env=env)
+
     controller = PanelController()
     try:
         asyncio.run(controller.connect())
