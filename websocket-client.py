@@ -85,13 +85,16 @@ class PanelController:
                         print("Invalid heartbeat interval received; ignoring update.")
                 await self.send_heartbeat_to_server(websocket)
             elif data.get("type") == "refresh" and data.get("to") == "panel":
+                print("refreshing...")
                 await self.send_heartbeat_to_server(websocket)
+
             elif data.get("type") == "refresh" and data.get("to") == "panel":
                 await self.reboot()
         except json.JSONDecodeError:
             print("Failed to decode message:", message)
 
     async def reboot(self):
+        print("rebooting...")
         env = os.environ.copy()
         subprocess.run(["sudo", "reboot"], env=env)
 
