@@ -3,10 +3,11 @@ import websockets
 import json
 import subprocess
 import math
-
 import os
 import RPi.GPIO as GPIO
 from dotenv import load_dotenv
+from threading import Thread
+import queue
 
 class PanelController:
     def __init__(self):
@@ -33,15 +34,29 @@ class PanelController:
         GPIO.setup(self.led2_pin, GPIO.OUT)
 
         self.current_state = "off"
-        
+
+        # Queue for GPIO events
+        self.gpio_queue = queue.Queue()
+
+        # Start a thread to handle GPIO events
+        self.gpio_thread = Thread(target=self.gpio_event_handler)
+        self.gpio_thread.daemon = True
+        self.gpio_thread.start()
+
         # Add event detection
         GPIO.add_event_detect(self.door_sensor_pin, GPIO.BOTH, callback=self.gpio_event_detected, bouncetime=200)
         GPIO.add_event_detect(self.sector_status_pin, GPIO.BOTH, callback=self.gpio_event_detected, bouncetime=200)
         GPIO.add_event_detect(self.button_pin, GPIO.BOTH, callback=self.gpio_event_detected, bouncetime=200)
 
     def gpio_event_detected(self, channel):
-        print(f"GPIO event detected on channel: {channel}")
-        asyncio.run_coroutine_threadsafe(self.send_gpio_heartbeat(), asyncio.get_event_loop())
+        self.gpio_queue.put(channel)
+
+    def gpio_event_handler(self):
+        while True:
+            channel = self.gpio_queue.get()
+            if channel is not None:
+                print(f"GPIO event detected on channel: {channel}")
+                asyncio.run_coroutine_threadsafe(self.send_gpio_heartbeat(), asyncio.get_event_loop())
 
     async def send_gpio_heartbeat(self):
         try:
