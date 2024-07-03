@@ -3,11 +3,10 @@ import websockets
 import json
 import subprocess
 import math
+
 import os
 import RPi.GPIO as GPIO
 from dotenv import load_dotenv
-from threading import Thread
-import queue
 
 class PanelController:
     def __init__(self):
@@ -34,36 +33,6 @@ class PanelController:
         GPIO.setup(self.led2_pin, GPIO.OUT)
 
         self.current_state = "off"
-
-        # Queue for GPIO events
-        self.gpio_queue = queue.Queue()
-
-        # Start a thread to handle GPIO events
-        self.gpio_thread = Thread(target=self.gpio_event_handler)
-        self.gpio_thread.daemon = True
-        self.gpio_thread.start()
-
-        # Add event detection
-        GPIO.add_event_detect(self.door_sensor_pin, GPIO.BOTH, callback=self.gpio_event_detected, bouncetime=200)
-        GPIO.add_event_detect(self.sector_status_pin, GPIO.BOTH, callback=self.gpio_event_detected, bouncetime=200)
-        GPIO.add_event_detect(self.button_pin, GPIO.BOTH, callback=self.gpio_event_detected, bouncetime=200)
-
-    def gpio_event_detected(self, channel):
-        self.gpio_queue.put(channel)
-
-    def gpio_event_handler(self):
-        while True:
-            channel = self.gpio_queue.get()
-            if channel is not None:
-                print(f"GPIO event detected on channel: {channel}")
-                asyncio.run_coroutine_threadsafe(self.send_gpio_heartbeat(), asyncio.get_event_loop())
-
-    async def send_gpio_heartbeat(self):
-        try:
-            async with websockets.connect(self.uri) as websocket:
-                await self.send_heartbeat_to_server(websocket)
-        except Exception as e:
-            print(f"Error sending GPIO heartbeat: {e}")
 
     async def connect(self):
         while True:
@@ -92,14 +61,16 @@ class PanelController:
         print(f"Registered with server as {self.client_type}, name: {self.client_name}")
 
     async def main_loop(self, websocket):
+    # Create the heartbeat task
         heartbeat_task = asyncio.create_task(self.send_heartbeat(websocket))
         try:
             while True:
                 message = await websocket.recv()
                 await self.handle_message(message, websocket)
         finally:
-            heartbeat_task.cancel()
-            await heartbeat_task
+            heartbeat_task.cancel()  # Ensure the task is cancelled when the loop exits
+            await heartbeat_task  # Wait for the task to be cancelled properly
+
 
     async def handle_message(self, message, websocket):
         try:
@@ -116,6 +87,7 @@ class PanelController:
             elif data.get("type") == "refresh" and data.get("to") == "panel":
                 print("refreshing...")
                 await self.send_heartbeat_to_server(websocket)
+
             elif data.get("type") == "reboot" and data.get("to") == "panel":
                 await self.reboot()
         except json.JSONDecodeError:
@@ -142,12 +114,13 @@ class PanelController:
         while True:
             try:
                 await self.send_heartbeat_to_server(websocket)
-                await asyncio.sleep(self.heartbeat_interval)
+                await asyncio.sleep(self.heartbeat_interval)  # Ensure the interval is valid and being used
             except asyncio.CancelledError:
                 print("Heartbeat task cancelled, exiting...")
                 break
             except Exception as e:
-                print(f"Error during heartbeat: {e}")
+                print(f"Error during heartbeat: {e}")  # Log any errors that occur
+
 
     async def send_heartbeat_to_server(self, websocket):
         try:
@@ -161,20 +134,25 @@ class PanelController:
                 "name": self.client_name
             }
             await websocket.send(json.dumps(data))
-            print(f"Heartbeat sent at interval {self.heartbeat_interval}s")
+            print(f"Heartbeat sent at interval {self.heartbeat_interval}s")  # Log when a heartbeat is sent
         except Exception as e:
-            print(f"Failed to send heartbeat: {e}")
+            print(f"Failed to send heartbeat: {e}")  # Log the error
+     
 
     async def get_cpu_temperature(self):
         try:
+            # Command to get CPU temperature
             temp_files = subprocess.check_output("cat /sys/class/thermal/thermal_zone*/temp", shell=True)
             temp_lines = temp_files.splitlines()
             temp_milli_celsius = int(temp_lines[0])
+            
+            # Convert milli Celsius to Celsius and use math.floor to round down
             temp_celsius = temp_milli_celsius / 1000.0
             return math.floor(temp_celsius)
         except Exception as e:
             print(f"Error reading CPU temperature: {e}")
             return None
+
 
     async def get_display_state(self):
         try:
@@ -190,11 +168,13 @@ class PanelController:
         env["DISPLAY"] = ":0"
         subprocess.run(["xset", "s", "off"], env=env)
         subprocess.run(["xset", "s", "noblank"], env=env)
+        # subprocess.run(["xset", "-dpms"], env=env)
 
     async def turn_off_screen(self):
         env = os.environ.copy()
         env["DISPLAY"] = ":0"
         subprocess.run(["xrandr", "--output", self.display_output, "--off"], env=env)
+        # subprocess.run(["xset", "dpms", "force", "off"], env=env)
         self.current_state = "off"
         GPIO.output(self.led1_pin, GPIO.LOW)
         GPIO.output(self.led2_pin, GPIO.LOW)
