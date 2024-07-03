@@ -51,6 +51,7 @@ class PanelController:
             print(f"Error sending GPIO heartbeat: {e}")
 
     async def connect(self):
+        
         while True:
             try:
                 async with websockets.connect(self.uri) as websocket:
