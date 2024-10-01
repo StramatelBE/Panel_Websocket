@@ -75,6 +75,7 @@ class PanelController:
     async def handle_message(self, message, websocket):
         try:
             data = json.loads(message)
+            print(data)
             if data.get("type") == "instruction" and data.get("to") == "panel":
                 await self.process_instruction(data)
                 if "heartbeatTimer" in data:
