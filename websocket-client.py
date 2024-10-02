@@ -74,6 +74,7 @@ class PanelController:
             data = json.loads(message)
             if data.get("type") == "instruction" and data.get("to") == "panel":
                 instruction = data.get("instruction")
+                print(data)
                 if instruction:
                     await self.process_instruction(instruction, websocket)
                     # Handle heartbeat interval update
@@ -88,7 +89,8 @@ class PanelController:
                     if instruction != "reboot":  # Avoid sending another heartbeat after rebooting
                         await self.send_heartbeat_to_server(websocket)
             else:
-                print(f"Received unknown message type or not addressed to panel: {data}")
+                pass
+                #print(f"Received unknown message type or not addressed to panel: {data}")
         except json.JSONDecodeError:
             print("Failed to decode message:", message)
 
