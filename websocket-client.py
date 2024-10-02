@@ -103,13 +103,20 @@ class PanelController:
             await self.turn_off_screen()
         elif instruction == "refresh":
             print("Refreshing panel state...")
-            # You can add any refresh logic here if needed
+            # Any additional refresh logic can be added here
         elif instruction == "reboot":
-            await self.send_rebooting_status(websocket)
-            await asyncio.sleep(1)  # Wait to ensure the message is sent
+            await self.set_rebooting_state(websocket)
+            await asyncio.sleep(1)  # Ensure the message is sent before rebooting
             await self.reboot()
         else:
             print(f"Unknown instruction received: {instruction}")
+
+
+    async def set_rebooting_state(self, websocket):
+        self.current_state = "rebooting"
+        await self.send_heartbeat_to_server(websocket)
+        print("Panel state set to rebooting and heartbeat sent.")
+
 
     async def send_rebooting_status(self, websocket):
         try:
@@ -130,6 +137,7 @@ class PanelController:
     async def reboot(self):
         print("Rebooting panel...")
         env = os.environ.copy()
+        self.current_state = None  # Reset the state after reboot
         subprocess.run(["sudo", "reboot"], env=env)
 
     async def send_heartbeat(self, websocket):
@@ -146,9 +154,11 @@ class PanelController:
 
     async def send_heartbeat_to_server(self, websocket):
         try:
+            display_state = await self.get_display_state()
+            state = self.current_state if self.current_state == 'rebooting' else display_state
             data = {
                 "type": "heartbeat",
-                "state": await self.get_display_state(),
+                "state": state,
                 "cpuTemp": await self.get_cpu_temperature(),
                 "sectorStatus": GPIO.input(self.sector_status_pin) == GPIO.LOW,
                 "isDoorOpen": GPIO.input(self.door_sensor_pin) == GPIO.HIGH,
@@ -156,9 +166,10 @@ class PanelController:
                 "name": self.client_name
             }
             await websocket.send(json.dumps(data))
-            print(f"Heartbeat sent at interval {self.heartbeat_interval}s")
+            print(f"Heartbeat sent with state '{state}' at interval {self.heartbeat_interval}s")
         except Exception as e:
             print(f"Failed to send heartbeat: {e}")
+
 
     async def get_cpu_temperature(self):
         try:
@@ -190,7 +201,6 @@ class PanelController:
         env = os.environ.copy()
         env["DISPLAY"] = ":0"
         subprocess.run(["xrandr", "--output", self.display_output, "--off"], env=env)
-        self.current_state = "off"
         GPIO.output(self.led1_pin, GPIO.LOW)
         GPIO.output(self.led2_pin, GPIO.LOW)
         print("Screen turned off.")
@@ -199,10 +209,10 @@ class PanelController:
         env = os.environ.copy()
         env["DISPLAY"] = ":0"
         subprocess.run(["xrandr", "--output", self.display_output, "--auto"], env=env)
-        self.current_state = "on"
         GPIO.output(self.led1_pin, GPIO.HIGH)
         GPIO.output(self.led2_pin, GPIO.HIGH)
         print("Screen turned on.")
+
 
     def cleanup(self):
         GPIO.cleanup()
