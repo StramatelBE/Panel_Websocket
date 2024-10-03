@@ -1,4 +1,5 @@
 import asyncio
+import time
 import websockets
 import json
 import subprocess
@@ -136,6 +137,7 @@ class PanelController:
         print("Rebooting panel...")
         env = os.environ.copy()
         self.current_state = None  # Reset the state after reboot
+        subprocess.run(["git", "pull"], env=env)
         subprocess.run(["sudo", "reboot"], env=env)
 
     async def send_heartbeat(self, websocket):
@@ -217,6 +219,7 @@ class PanelController:
 
 if __name__ == "__main__":
     env = os.environ.copy()
+    time.sleep(2)
     subprocess.run(["xrandr", "--output", "HDMI-1", "--off"], env=env)
 
     controller = PanelController()
