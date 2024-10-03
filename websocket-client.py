@@ -39,6 +39,7 @@ class PanelController:
             try:
                 async with websockets.connect(self.uri) as websocket:
                     print("Connected to the server")
+                    await self.turn_off_screen()
                     await self.register(websocket)
                     await self.main_loop(websocket)
             except websockets.ConnectionClosedError as e:
@@ -219,7 +220,6 @@ class PanelController:
 
 if __name__ == "__main__":
     env = os.environ.copy()
-    time.sleep(2)
     subprocess.run(["xrandr", "--output", "HDMI-1", "--off"], env=env)
 
     controller = PanelController()
