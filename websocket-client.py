@@ -1,4 +1,5 @@
 import asyncio
+import time
 import websockets
 import json
 import subprocess
@@ -38,6 +39,7 @@ class PanelController:
             try:
                 async with websockets.connect(self.uri) as websocket:
                     print("Connected to the server")
+                    await self.turn_off_screen()
                     await self.register(websocket)
                     await self.main_loop(websocket)
             except websockets.ConnectionClosedError as e:
@@ -139,6 +141,8 @@ class PanelController:
         print("Rebooting panel...")
         env = os.environ.copy()
         self.current_state = None  # Reset the state after reboot
+        time.sleep(5)
+
         subprocess.run(["sudo", "reboot"], env=env)
 
     async def send_heartbeat(self, websocket):
