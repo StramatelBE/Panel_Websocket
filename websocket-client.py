@@ -39,6 +39,7 @@ class PanelController:
             try:
                 async with websockets.connect(self.uri) as websocket:
                     print("Connected to the server")
+                    await self.turn_off_screen()
                     await self.register(websocket)
                     await self.main_loop(websocket)
             except websockets.ConnectionClosedError as e:
