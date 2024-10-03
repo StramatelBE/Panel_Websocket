@@ -72,6 +72,7 @@ class PanelController:
             await heartbeat_task
 
     async def handle_message(self, message, websocket):
+        print(message)
         try:
             data = json.loads(message)
             if data.get("type") == "instruction" and data.get("to") == "panel":
