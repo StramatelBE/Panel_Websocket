@@ -141,7 +141,7 @@ class PanelController:
         print("Rebooting panel...")
         env = os.environ.copy()
         self.current_state = None  # Reset the state after reboot
-        time.sleep(1)
+        await asyncio.sleep(1)
         subprocess.run(["sudo", "reboot"], env=env)
 
     async def send_heartbeat(self, websocket):
