@@ -77,8 +77,8 @@ class PanelController:
             data = json.loads(message)
             if data.get("type") == "instruction" and data.get("to") == "panel":
                 instruction = data.get("instruction")
-                print(data)
                 instruction_id = data.get("instructionId")
+                print(f"Received instruction: {instruction} with ID: {instruction_id}")
                 if instruction:
                     await self.process_instruction(instruction, instruction_id, websocket)
                     # Send an immediate heartbeat after processing the instruction
@@ -86,7 +86,6 @@ class PanelController:
                         await self.send_heartbeat_to_server(websocket)
             else:
                 pass
-                #print(f"Received unknown message type or not addressed to panel: {data}")
         except json.JSONDecodeError:
             print("Failed to decode message:", message)
 
