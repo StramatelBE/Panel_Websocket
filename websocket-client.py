@@ -35,6 +35,7 @@ class PanelController:
         self.current_state = "off"
 
     async def connect(self):
+        await self.turn_off_screen()
         while True:
             try:
                 async with websockets.connect(self.uri) as websocket:
@@ -79,25 +80,19 @@ class PanelController:
             data = json.loads(message)
             if data.get("type") == "instruction" and data.get("to") == "panel":
                 instruction = data.get("instruction")
+                instruction_id = data.get("instructionId")
+                print(f"Received instruction: {instruction} with ID: {instruction_id}")
                 if instruction:
-                    await self.process_instruction(instruction, websocket)
-                    # Handle heartbeat interval update
-                    if "heartbeatTimer" in data:
-                        new_interval = int(data["heartbeatTimer"])
-                        if new_interval > 0:
-                            self.heartbeat_interval = new_interval
-                            print(f"Heartbeat interval updated to {self.heartbeat_interval} seconds")
-                        else:
-                            print("Invalid heartbeat interval received; ignoring update.")
+                    await self.process_instruction(instruction, instruction_id, websocket)
                     # Send an immediate heartbeat after processing the instruction
-                    if instruction != "reboot":  # Avoid sending another heartbeat after rebooting
+                    if instruction != "reboot":
                         await self.send_heartbeat_to_server(websocket)
             else:
-                print(f"Received unknown message type or not addressed to panel: {data}")
+                pass
         except json.JSONDecodeError:
             print("Failed to decode message:", message)
 
-    async def process_instruction(self, instruction, websocket):
+    async def process_instruction(self, instruction, instruction_id, websocket):
         env = os.environ.copy()
         env["DISPLAY"] = ":0"
         if instruction == "on":
@@ -106,7 +101,6 @@ class PanelController:
             await self.turn_off_screen()
         elif instruction == "refresh":
             print("Refreshing panel state...")
-            # Any additional refresh logic can be added here
         elif instruction == "reboot":
             await self.set_rebooting_state(websocket)
             await asyncio.sleep(1)  # Ensure the message is sent before rebooting
@@ -114,6 +108,18 @@ class PanelController:
         else:
             print(f"Unknown instruction received: {instruction}")
 
+        # Send acknowledgement after processing
+        await self.send_acknowledgement(instruction_id, 'completed', websocket)
+
+    async def send_acknowledgement(self, instruction_id, status, websocket):
+        acknowledgement_message = {
+            "type": "acknowledgement",
+            "instructionId": instruction_id,
+            "status": status,
+            "panelName": self.client_name,
+        }
+        await websocket.send(json.dumps(acknowledgement_message))
+        print(f"Acknowledgement sent for instruction {instruction_id} with status {status}")
 
     async def set_rebooting_state(self, websocket):
         self.current_state = "rebooting"
