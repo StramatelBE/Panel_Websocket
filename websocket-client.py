@@ -35,6 +35,7 @@ class PanelController:
         self.current_state = "off"
 
     async def connect(self):
+        await self.turn_off_screen()
         while True:
             try:
                 async with websockets.connect(self.uri) as websocket:
@@ -140,7 +141,7 @@ class PanelController:
         print("Rebooting panel...")
         env = os.environ.copy()
         self.current_state = None  # Reset the state after reboot
-        time.sleep(5)
+        await asyncio.sleep(1)
 
         subprocess.run(["sudo", "reboot"], env=env)
 
